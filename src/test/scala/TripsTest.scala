@@ -29,13 +29,73 @@ class DoesNotCrashTest extends FlatSpec with Matchers {
   }
 
   "A STripsOntItem" should "have the correct features" in {
+    //Generate 20 random ont type names
+   
+   //TODO be able to change number of files to look at, specific files to look at and not to look at
+   
+
+    val allOntTypes = XML.loadFile(STripsOntology.defaultPath + "TRIPS-ontology-0.1.xml") \\ "ONTTYPE"
+    
+    val random = new Random
+    val ontTestIndices = List.tabulate(20)(n => random.nextInt(allOntTypes.length))
+    val testOntTypes = ontTestIndices.map(index => (allOntTypes(index) \ "@name"))
+    
+    //For each ont type name, compare STrips and XML info
+    testOntTypes.foreach { testType =>
+      val ontSTrips = ont.nodeByName(StripsOntName.build(testType))
+      
+     
+      val ontXML = XML.loadFile(STripsOntology.defaultPath + "ONT_" + testType + ".xml")
+      
+      val ontArgs = ontXML \\ "ARGUMENT"
+      ontArgs.foreach{ arg => 
+        
+        //Build a test frame from the xml information
+        val role = arg \ "@role"
+        
+        //Assumes all optional features will have optionality feature explicitly "optional"
+        val optional = if(((arg \ "@optionality").mkString) == "optional") true else false
+        
+        val fltype = arg \ "@fltype"
+        
+        //TODO How do I actually deal with features? Will there ever be more than one "FEATURES" per argument? 
+        //TODO What does the list STrips makes for features look like? 
+        //val features = ???
+        
+        
+        /* The following is Rik's code for grabbing features
+         * private def nodeSeq2Features(n : NodeSeq) : Map[SFeatureType, SFeatureVal] = {
+        
+         SFeatureType.features.map(f => {
+         f -> (n \@ f.name)//.text
+         }).filter(_._2 != "").map(x => (x._1 -> SFeatureVal(x._2))).toMap
+           }
+        */
+        
+        val testFrame = SFrame(role, optional, fltype, features)
+        
+        //Compare the test frame to the STrips info
+        //I forget what this does if it's not true, but probably want some way to tell which type and argument it failed on
+        ontSTrips.frame.contains(testFrame) shouldBe true
+        
+      }
+      
+    }
+    
+    /*
+    //the following compares the STrips frame for "accept" to the testFrame
+    // testFrame is hand-built from the ontology's XML information
+    
     val acc = ont.nodeByName(STripsOntName.build("accept"))
 
     val testFrame = SFrame("spatial-loc", true, "?!type", List())
 
     acc.frame.contains(testFrame) shouldBe true
+    * 
+    */
   }
-
+ 
+  
   "A STripsWord" should "be jsonifyable" in {
     ont.words.foreach { n =>
       val json = Json.toJson(n)
